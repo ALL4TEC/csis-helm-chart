@@ -1,0 +1,53 @@
+csis:
+  image:
+    registryUsername:
+    registryPassword:
+  init: false
+  initialization:
+    userEmail:
+    userFullName:
+    userPassword:
+  restore: false
+  volumes:
+    db:
+      size: '1Gi'
+      storageClass: db
+      name: csis-<instance>-db-pvc
+      restored: false
+      accessMode: ReadWriteMany
+    redis:
+      size: '1Gi'
+      storageClass: basic
+      name: csis-<instance>-redis-pvc
+      restored: false
+      accessMode: ReadWriteMany
+    storage:
+      size: '1Gi'
+      storageClass: replicated
+      name: csis-<instance>-storage-pvc
+      restored: false
+      accessMode: ReadWriteMany
+    assets:
+      size: '1Gi'
+      storageClass: basic
+      name: csis-instance-assets-pvc
+      restored: false
+      accessMode: ReadWriteMany
+    gpg:
+      size: '100Mi'
+      storageClass: basic
+      name: csis-<instance>-gpg-pvc
+      restored: false
+      accessMode: ReadWriteMany
+masterKey:
+otpSecretEncryptionKey:
+mail:
+  emailPassword:
+postgres:
+  dbPassword:
+pgadmin:
+  adminPassword:
+securecodebox:
+  scanners: null
+  webhook:
+    uuid:

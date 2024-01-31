@@ -1,0 +1,12 @@
+minio:
+  # disable the local minio instance
+  enabled: false
+s3:
+  enabled: true
+  # update the region to match the location of your bucket
+  endpoint: <bucket_endpoint>
+  bucket: <bucket>
+  # Name to a k8s secret with 'accesskey' and 'secretkey' as attributes in the same namespace as this release
+  # Example creation via kubectl:
+  # kubectl create secret generic securecodebox-s3-credentials --from-literal=accesskey="******" --from-literal=secretkey="******" -n <namespace>
+  keySecret: <bucket_creds>

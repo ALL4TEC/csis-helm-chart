@@ -1,0 +1,17 @@
+{{- range $key, $value := .Values.csis.volumes }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include (printf "csis.%sVolumeName" ($key)) $ }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+{{- include "csis.labels" $ | trim | nindent 4 }}
+spec:
+  accessModes:
+    - {{ $value.accessMode }}
+  resources:
+    requests:
+      storage: {{ $value.size }}
+  storageClassName: {{ (index $.Values.storageClass $value.storageClass) }}
+---
+{{- end }}

@@ -1,0 +1,128 @@
+# Default values for csis.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+csis:
+  cronjobs:
+    imports:
+      vulnerabilities:
+        qualys: "0 0 * * *" # required: true| default: 0 0 * * *| description: Qualys vulnerabilities import cronjob
+  deployQueue: false # required: true| default: false| description: Boolean to indicate if a new pod for queue must be deployed when a new job is created 
+  environment: production # required: true| default: production| description: Rails env 
+  host: <csis_domain> # required: true| default: | description: Applications URLs
+  image:
+    registry: <registry> # required: true| description: Csis image registry
+    registryPassword: <CopyFromVault> # required: true| description: Csis image registry password
+    registryUsername: <CopyFromVault> # required: true| description: Csis image registry username
+  init: false # required: true| default: false| description: Tell if needs to add initialization user and seed
+  initialization:
+    userEmail: <initializationUserEmail> # required: false| description: Csis initialization user email, only for first installation
+    userFullName: <initializationUserFullName> # required: false| description: Csis initialization user fullname, only for first installation 
+    userPassword: <initializationUserPassword> # required: false| description: Csis initialization user password, only for first installation
+  masterKey: <CopyFromVault> # required: true| description: Rails masterkey, keep secret, copy from secured vault 
+  modules:
+    communication:
+      googleChatEnabled: false # required: false| description: Enable/Disable googleChat module
+      microsoftTeamsEnabled: false # required: false| description: Enable/Disable microsoftTeams module
+      slackEnabled: false # required: false| description: Enable/Disable slack module
+      zohoCliqEnabled: false # required: false| description: Enable/Disable zohoCliq module
+    provisioning:
+      sellsyEnabled: false # required: false| description: Enable/Disable sellsy module
+    reports:
+      actionPlanEnabled: false # required: false| description: Enable/Disable actionPlan module
+      pentestEnabled: false # required: false| description: Enable/Disable pentest module
+    scanners:
+      cyberwatchEnabled: false # required: false| description: Enable/Disable Cyberwatch module 
+      qualysEnabled: false # required: false| description: Enable/Disable Qualys module
+      rapid7IasEnabled: false # required: false| description: Enable/Disable Rapid7Ias module
+    ticketing:
+      jiraEnabled: false # required: false| description: Enable/Disable jira module
+      matrix42Enabled: false # required: false| description: Enable/Disable matrix42 module
+      pmtCheckerInternet: false # required: false| description: pmtChecker
+      servicenowEnabled: false # required: false| description: Enable/Disable servicenow module
+  otpSecretEncryptionKey: <RakeSecret> # required: false| description: Rails secret key used to encrypt otp (2fa), bundle exec rake secret, only if 2fa wanted
+  restore: false # required: true| default: false| description: Tell if restoring
+  serviceAccount: csis-<instance>-sa # required: true| default: csis-<instance>-sa| description: Service account name used to specify some k8s roles 
+  volumes:
+    assets:
+      name: csis-<instance>-assets-pvc # required: true| description: Assets volume name
+      size: '1Gi' # required: true| description: Assets volume size in Gi
+      storageClass: basic # required: true| description: Assets volume storageClass
+      restored: false # required: true| description: Boolean to indicate if pvc must be created (false) or using restored one (true)
+      accessMode: ReadWriteMany # required: true| default: ReadWriteMany| description: PVC accessMode
+    db:
+      name: csis-<instance>-db-pvc # required: true| description: Db volume name
+      size: '1Gi' # required: true| description: Db volume size in Gi
+      storageClass: db # required: true| defaut: db| description: Db volume storageClass
+      restored: false # required: true| description: Boolean to indicate if pvc must be created (false) or using restored one (true)
+      accessMode: ReadWriteMany # required: true| default: ReadWriteMany| description: PVC accessMode
+    gpg:
+      name: csis-<instance>-gpg-pvc # required: true| description: Gpg volume name
+      size: '100Mi' # required: true| description: Gpg volume size in Mi
+      storageClass: basic # required: true| description: Gpg volume storageClass
+      restored: false # required: true| description: Boolean to indicate if pvc must be created (false) or using restored one (true)
+      accessMode: ReadWriteMany # required: true| default: ReadWriteMany| description: PVC accessMode
+    redis:
+      name: csis-<instance>-redis-pvc # required: true| description: Redis volume name
+      size: '1Gi' # required: true| description: Redis volume size in Gi
+      storageClass: basic # required: true| default: basic| description: Redis volume storageClass
+      restored: false # required: true| description: Boolean to indicate if pvc must be created (false) or using restored one (true)
+      accessMode: ReadWriteMany # required: true| default: ReadWriteMany| description: PVC accessMode
+    storage:
+      name: csis-<instance>-storage-pvc # required: true| description: Storage volume name
+      size: '1Gi' # required: true| description: Storage volume size in Gi
+      storageClass: replicated # required: true| default: replicated| description: Storage volume storageClass
+      restored: false # required: true| description: Boolean to indicate if pvc must be created (false) or using restored one (true)
+      accessMode: ReadWriteMany # required: true| default: ReadWriteMany| description: PVC accessMode
+lman:
+  host: https://<central_platform_domain> # required: true| description: Central platform url
+mail:
+  actionsEmail: <noreply> # required: true| description: From email for actions, specified in gpg private key
+  emailAccount: <noreply> # required: true| description: Mail server account
+  emailPassword: <CopyFromVault> # required: true| description: Mail password
+  gnupghome: gpg # required: true| default: gpg| description: Gpg home
+  sendAsEmail: <noreply> # required: false| description: Override emailAccount to send mails from this email (Server must allow to send as)
+  smtpAddress: 'smtp.office365.com' # required: true| description: SMTP adress
+  smtpAuthentication: login # required: true| description: SMTP authentication method among 'login', 'plain'
+  smtpDomain: '<domain>' # required: true| description: SMTP domain
+  smtpPort: 587 # required: true| description: SMTP port
+  smtpEnableStarttlsAuto: true # required: true| description: Force enable starttls for smtp
+monitoring:
+  exceptionsNotificationsEmail: '<exceptions_email>' # required: false| description: Exceptions notifications email, if set, exceptions are sent to specified email!
+pgadmin:
+  email: <noreply> # required: true| description: PgAdmin email
+  host: <pgadmin_domain> # required: true| default: | description: PgAdmin domain
+  adminPassword: <ChangeIt> # required: true| description: PgAdmin password
+  version: latest # required: true| description: PgAdmin version
+postgres:
+  dbPassword: <ChangeIt> # required: true| description: Postgresql csis db password, alphanum only
+  version: 13-alpine # required: true| description: Postgresql version
+redis:
+  version: 6-alpine # required: true| description: Redis version
+securecodebox:
+  enabled: false # required: true| default: false| description: Enable/Disable securecodebox
+  scanners: '' # required: false| description: SecureCodeBox scanners list, comma separated values among "zaproxy"
+  webhook:
+    uuid: <RakeUuid> # required: false| description: SecureCodeBox webhook uuid, bundle exec rake uuid:gen
+storageClass:
+  basic: longhorn-1replica # required: true| default: longhorn-1replica| description: Basic storageClass
+  db: longhorn # required: true| description: Db storageClass. keep for further modification to longhorn-encrypted or with more replicas...
+  replicated: longhorn # required: true| default: longhorn| description: Replicated storageClass
+  gpg: longhorn-gpg # required: true| default: longhorn-gpg| description: StorageClass getting gpg key fromBackup
+zap:
+  scanner:
+    resources:
+      limits:
+        cpu: '1.4' # required: false| description: Usable CPU limit for zap scan
+        memory: 2Gi # required: false| description: Usable CPU memory limit for zap scan
+      requests:
+        cpu: '1.3' # required: false| description: Requestable CPU for zap scan
+        memory: 2Gi # required: false| description: Requestable memory for zap scan
+generic-webhook:
+  webhookUrl: https://<csis_domain>/webhook/securecodebox/<SECURE_CODE_BOX_WH_UUID> # required: false| description: Replace env var
+  # hook:
+  #   authentication:
+  #     apikey:
+  #       headerNameKey: headerName
+  #       headerValueKey: headerValue
+  #       userSecret: generic-webhook-credentials
+  

@@ -1,0 +1,14 @@
+If new instance:
+
+1. Set new dns record pointing to ROOT_URL corresponding to returned ip from following cmd
+```sh
+$ kubectl get ingresses -n <namespace>
+```
+2. Add corresponding redirection URLs in all oauth accounts (console.developpers.google.com, microsoft, slack, etc...)
+3. If reporting to centralized app, then do not forget to generate a token from ui and paste it into credentials...
+
+If Error 500, it is possible that puma server needs a restart after assets compilation:
+
+```sh
+$ kubectl -n <namespace> exec pods/<release>-app-xxx -it -- sh -c "pumactl restart -p 1"
+```

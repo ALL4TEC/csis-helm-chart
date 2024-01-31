@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    kcert.dev/ingress: "managed"
+    component: {{ .Release.Name }}-nginx
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: {{ .Release.Name }}-web
+  namespace: {{ .Release.Namespace }}
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: {{ .Values.csis.host }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ .Release.Name }}-app
+            port:
+              number: 8002
+        pathType: ImplementationSpecific
+  - host: {{ .Values.pgadmin.host }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ .Release.Name }}-db-admin
+            port:
+              number: 8081
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - {{ .Values.csis.host }}
+    secretName: {{ .Release.Name }}-csis-tls-secret
+  - hosts:
+    - {{ .Values.pgadmin.host }}
+    secretName: {{ .Release.Name }}-pgadmin-tls-secret

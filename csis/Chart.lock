@@ -1,0 +1,9 @@
+dependencies:
+- name: generic-webhook
+  repository: https://charts.securecodebox.io/
+  version: 4.3.0
+- name: zap
+  repository: https://charts.securecodebox.io/
+  version: 4.3.0
+digest: sha256:f90022861a1724c0abb9d6235bff3d4c890b6e312097fc12216b8bfcc452b408
+generated: "2023-11-24T09:09:13.189468464+01:00"

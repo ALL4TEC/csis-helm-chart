@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{- include "csis.labels" . | trim | nindent 4 }}
+data:
+  ACTIONS_EMAIL: {{ .Values.mail.actionsEmail }}
+  ACTION_PLAN_ENABLED: {{ quote .Values.csis.modules.reports.actionPlanEnabled }}
+  CYBERWATCH_ENABLED: {{ quote .Values.csis.modules.scanners.cyberwatchEnabled }}
+  DEFAULT_FROM_EMAIL: {{ .Values.mail.sendAsEmail }}
+  EXCEPTIONS_NOTIFICATIONS_EMAIL: {{ .Values.monitoring.exceptionsNotificationsEmail }}
+  GNUPGHOME: {{ .Values.mail.gnupghome }}
+  GOOGLE_CHAT_ENABLED: {{ quote .Values.csis.modules.communication.googleChatEnabled }}
+  HOSTS: {{ .Values.csis.host }}
+  INSTANCE_NAME: {{ .Release.Name }}
+  JIRA_ENABLED: {{ quote .Values.csis.modules.ticketing.jiraEnabled }}
+  LMAN_ROOT: {{ .Values.lman.host }}
+  MATRIX42_ENABLED: {{ quote .Values.csis.modules.ticketing.matrix42Enabled }}
+  MICROSOFT_TEAMS_ENABLED: {{ quote .Values.csis.modules.communication.microsoftTeamsEnabled }}
+  NAMESPACE: {{ .Release.Namespace }}
+  NODE_OPTIONS: --openssl-legacy-provider
+  OTP_SECRET_ENCRYPTION_KEY: {{ .Values.csis.otpSecretEncryptionKey }}
+  PENTEST_ENABLED: {{ quote .Values.csis.modules.reports.pentestEnabled }}
+  PMT_CHECKER_INTERNET: {{ quote .Values.csis.modules.ticketing.pmtCheckerInternet }}
+  POSTGRES_DB: {{ include "csis.dbName" . }}
+  POSTGRES_HOST: {{ .Release.Name }}-db
+  POSTGRES_PASSWORD: {{ .Values.postgres.dbPassword }}
+  QUALYS_ENABLED: {{ quote .Values.csis.modules.scanners.qualysEnabled }}
+  RAILS_ENV: {{ .Values.csis.environment }}
+  RAILS_LOG_TO_STDOUT: enabled
+  RAILS_SERVE_STATIC_FILES: enabled
+  REDIS_URL: redis://{{ .Release.Name }}-redis:6379
+  REGISTRY: {{ include "csis.appRegistry" . }}
+  RESQUE_KUBERNETES: 'true'
+  ROOT_URL: https://{{ .Values.csis.host }}
+  {{- if .Values.securecodebox.scanners }}
+  SCB_SCANNERS: {{ .Values.securecodebox.scanners }}
+  SECURE_CODE_BOX_WH_UUID: {{ .Values.securecodebox.webhook.uuid }}
+  {{- end }}
+  SELLSY_ENABLED: {{ quote .Values.csis.modules.provisioning.sellsyEnabled }}
+  SERVICE_ACCOUNT: {{ .Values.csis.serviceAccount }}
+  SERVICENOW_ENABLED: {{ quote .Values.csis.modules.ticketing.servicenowEnabled }}
+  SLACK_ENABLED: {{ quote .Values.csis.modules.communication.slackEnabled }}
+  SMTP_ADDRESS: {{ quote .Values.mail.smtpAddress }}
+  SMTP_AUTHENTICATION: {{ quote .Values.mail.smtpAuthentication }}
+  SMTP_DOMAIN: {{ quote .Values.mail.smtpDomain }}
+  SMTP_PORT: {{ quote .Values.mail.smtpPort }}
+  SMTP_ENABLE_STARTTLS_AUTO: {{ quote .Values.mail.smtpEnableStarttlsAuto }}
+  ZOHO_CLIQ_ENABLED: {{ quote .Values.csis.modules.communication.zohoCliqEnabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-db-admin-server-configmap
+  namespace: {{ .Release.Namespace }}
+  labels:
+    component: {{ .Release.Name }}-db-admin-server-configmap
+{{- include "csis.labels" . | trim | nindent 4 }}
+data:
+  servers.json: |
+    {
+      "Servers": {
+        "1": {
+          "Name": "{{ .Release.Name }}-db",
+          "Group": "csis",
+          "Port": 5432,
+          "Username": "postgres",
+          "Host": "{{ .Release.Name }}-db",
+          "SSLMode": "prefer",
+          "MaintenanceDB": "postgres"
+        }
+      }
+    }

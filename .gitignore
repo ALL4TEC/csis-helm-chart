@@ -1,0 +1,4 @@
+# Ignore test chart
+test/
+*.gpg
+test_chart_build.txt

@@ -1,0 +1,204 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  labels:
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: nginx-allow-all # Retirer les 1, nécessaires pour tester sur un cluster qui les possède déjà ...
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    meta.helm.sh/release-name: {{ include "csis.name" . }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      component: {{ .Release.Name }}-nginx
+  ingress:
+  - {}
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  labels:
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: rs-nginx-allow-all
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx-ingress
+  ingress:
+  - {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: csis-redis-allow
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      component: {{ .Release.Name }}-redis
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-app
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-queue
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-scheduler
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-migration-hook
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-maintenance-hook
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-stored-jobs-schedule-hook
+      ports:
+      - port: 6379
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: csis-db-allow
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      component: {{ .Release.Name }}-db
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          component: {{ .Release.Name }}-app
+    - podSelector:
+        matchLabels:
+          component: {{ .Release.Name }}-queue
+    - podSelector:
+        matchLabels:
+          component: {{ .Release.Name }}-db-admin
+    - podSelector:
+        matchLabels:
+          component: {{ .Release.Name }}-migration-hook
+    - podSelector:
+        matchLabels:
+          component: {{ .Release.Name }}-seed-hook
+    - podSelector:
+        matchLabels:
+          component: {{ .Release.Name }}-user-init-hook
+    - podSelector:
+        matchLabels:
+          component: {{ .Release.Name }}-stored-jobs-schedule-hook
+    - podSelector:
+        matchLabels:
+          component: {{ .Release.Name }}-maintenance-hook
+    ports:
+    - port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: csis-app-allow
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      component: {{ .Release.Name }}-app
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            app: nginx-ingress
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-nginx
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-redis
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-db
+      ports:
+      - port: 3000
+    - ports:
+      - port: 3000
+      from: [] # External access
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: csis-queue-allow
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      component: {{ .Release.Name }}-queue
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-redis
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-db
+      ports:
+      - port: 6379
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: csis-scheduler-allow
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      component: {{ .Release.Name }}-scheduler
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-redis
+      ports:
+      - port: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: csis-db-admin-allow
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      component: {{ .Release.Name }}-db-admin
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            app: nginx-ingress
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-nginx
+      - podSelector:
+          matchLabels:
+            component: {{ .Release.Name }}-db
+      ports:
+      - port: 80
+    - ports:
+      - port: 80
+      from: [] # External access

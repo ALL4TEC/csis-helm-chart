@@ -1,0 +1,294 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: {{ .Release.Name }}-redis
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: {{ .Release.Name }}-redis
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  strategy: {}
+  selector:
+    matchLabels:
+      component: {{ .Release.Name }}-redis
+  template:
+    metadata:
+      labels:
+        component: {{ .Release.Name }}-redis
+    spec:
+      containers:
+      - name: csis-redis
+        image: redis:{{ .Values.redis.version }}
+        ports:
+        - containerPort: 6379
+        resources: {}
+        volumeMounts:
+        - mountPath: /data
+          name: redis-storage
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: {{ include "csis.redisVolumeName" . }}
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: {{ .Release.Name }}-db
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: {{ .Release.Name }}-db
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  strategy: {}
+  selector:
+    matchLabels:
+      component: {{ .Release.Name }}-db
+  template:
+    metadata:
+      labels:
+        component: {{ .Release.Name }}-db
+    spec:
+      containers:
+      - name: csis-db
+        envFrom:
+        - configMapRef:
+            name: env-{{ .Release.Name }}
+        env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/postgres
+        image: postgres:{{ .Values.postgres.version }}
+        ports:
+        - containerPort: 5432
+        resources: {}
+        volumeMounts:
+          - name: db-storage
+            mountPath: /var/lib/postgresql/data
+            subPath: postgres
+      volumes:
+        - name: db-storage
+          persistentVolumeClaim:
+            claimName: {{ include "csis.dbVolumeName" . }}
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: {{ .Release.Name }}-app
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: {{ .Release.Name }}-app
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  strategy: {}
+  selector:
+    matchLabels:
+      component: {{ .Release.Name }}-app
+  template:
+    metadata:
+      labels:
+        component: {{ .Release.Name }}-app
+    spec:
+      serviceAccountName: {{ .Values.csis.serviceAccount }}
+      securityContext:
+        # runAsUser: 1000
+        # runAsGroup: 1000
+        # fsGroup: 1000
+      containers:
+      - name: csis-app
+        args: ["bundle", "exec", "rails", "s", "-p", "3000", "-b", "0.0.0.0"]
+        securityContext:
+          # capabilities:
+          #   drop:
+          #     - ALL
+          # readOnlyRootFilesystem: true
+          # allowPrivilegeEscalation: false
+        env:
+        - name: RAILS_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rails-secrets
+              key: rails_master_key
+        - name: STATIC_FILES_PATH
+          value: public/packs
+        - name: STATIC_URL_PREFIX
+          value: /packs
+        envFrom:
+        - configMapRef:
+            name: env-{{ .Release.Name }}
+        image: {{ include "csis.appImage" . }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        resources: {}
+        workingDir: /var/www/csis
+        volumeMounts:
+          - name: assets-storage
+            mountPath: /var/www/csis/public
+          - name: storage-storage
+            mountPath: /var/www/csis/storage
+          - name: gpg-storage # Used to import public keys
+            mountPath: /var/www/csis/gpg
+      volumes:
+        - name: assets-storage
+          persistentVolumeClaim:
+            claimName: {{ include "csis.assetsVolumeName" . }}
+        - name: storage-storage           #Nom naze mais bon ...
+          persistentVolumeClaim:
+            claimName: {{ include "csis.storageVolumeName" . }}
+        - name: gpg-storage
+          persistentVolumeClaim:
+            claimName: {{ include "csis.gpgVolumeName" . }}
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: {{ .Release.Name }}-queue
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: {{ .Release.Name }}-queue
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.csis.deployQueue | ternary 1 0 }}
+  strategy: {}
+  selector:
+    matchLabels:
+      component: {{ .Release.Name }}-queue
+  template:
+    metadata:
+      labels:
+        component: {{ .Release.Name }}-queue
+    spec:
+      serviceAccountName: {{ .Values.csis.serviceAccount }}
+      containers:
+      - name: csis-resque-worker
+        args: ["bundle", "exec", "rails", "environment", "resque:work"]
+        env:
+        - name: RAILS_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rails-secrets
+              key: rails_master_key
+        - name: QUEUE
+          value: '*'
+        envFrom:
+        - configMapRef:
+            name: env-{{ .Release.Name }}
+        - secretRef:
+            name: mail-secret
+        image: {{ include "csis.appImage" . }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        resources: {}
+        workingDir: /var/www/csis
+        volumeMounts:
+          - name: assets-storage # Used to include images in reports
+            mountPath: /var/www/csis/public
+          - name: storage-storage # Used to enable access to uploaded files (for customization for example)
+            mountPath: /var/www/csis/storage
+          - name: gpg-storage # Used to encrypt mails
+            mountPath: /var/www/csis/gpg
+      volumes:
+        - name: assets-storage
+          persistentVolumeClaim:
+            claimName: {{ include "csis.assetsVolumeName" . }}
+        - name: storage-storage           #Nom naze mais bon ...
+          persistentVolumeClaim:
+            claimName: {{ include "csis.storageVolumeName" . }}
+        - name: gpg-storage
+          persistentVolumeClaim:
+            claimName: {{ include "csis.gpgVolumeName" . }}
+        # TODO: un volume de moins mais readonly donc pas possible d'enregistrer des pub_key ?
+        # - configMap:
+        #     defaultMode: 420
+        #     name: gpg-key
+        #   name: gpg-storage
+      restartPolicy: Always
+---
+# Utile après la v3.0.0
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: {{ .Release.Name }}-scheduler
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: {{ .Release.Name }}-scheduler
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  strategy: {}
+  selector:
+    matchLabels:
+      component: {{ .Release.Name }}-scheduler
+  template:
+    metadata:
+      labels:
+        component: {{ .Release.Name }}-scheduler
+    spec:
+      serviceAccountName: {{ .Values.csis.serviceAccount }}
+      containers:
+      - name: csis-resque-scheduler
+        args: ["bundle", "exec", "rails", "environment", "resque:scheduler"]
+        env:
+        - name: RAILS_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rails-secrets
+              key: rails_master_key
+        envFrom:
+        - configMapRef:
+            name: env-{{ .Release.Name }}
+        image: {{ include "csis.appImage" . }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        resources: {}
+        workingDir: /var/www/csis
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: {{ .Release.Name }}-db-admin
+{{- include "csis.labels" . | trim | nindent 4 }}
+  name: {{ .Release.Name }}-db-admin
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 0
+  strategy: {}
+  selector:
+    matchLabels:
+      component: {{ .Release.Name }}-db-admin
+  template:
+    metadata:
+      labels:
+        component: {{ .Release.Name }}-db-admin
+    spec:
+      containers:
+      - name: csis-db-admin
+        env:
+        - name: PGADMIN_DEFAULT_EMAIL
+          value: {{ .Values.pgadmin.email }}
+        - name: PGADMIN_DEFAULT_PASSWORD
+          value: {{ .Values.pgadmin.adminPassword }}
+        - name: PGADMIN_SERVER_JSON_FILE
+          value: /pgadmin4/servers/servers.json
+        image: dpage/pgadmin4:{{ .Values.pgadmin.version }}
+        ports:
+        - containerPort: 80
+        resources: {}
+        volumeMounts:
+        - readOnly: true
+          name: db-admin-storage
+          mountPath: /pgadmin4/servers/
+      volumes:
+      - name: db-admin-storage
+        configMap:
+          name: {{ .Release.Name }}-db-admin-server-configmap
+      restartPolicy: Always
